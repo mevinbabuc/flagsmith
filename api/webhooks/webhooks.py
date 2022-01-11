@@ -67,6 +67,10 @@ def call_environment_webhooks(environment, data, event_type):
     )
 
 
+def call_identity_integration_webhook():
+    pass
+
+
 def call_organisation_webhooks(organisation, data, event_type):
     _call_webhooks(
         organisation.webhooks.filter(enabled=True),

@@ -3,7 +3,13 @@ import typing
 
 import requests
 
+import features
+from environments.identities import (
+    traits,  # .serializers import TraitSerializerBasic
+)
 from integrations.common.wrapper import AbstractBaseIdentityIntegrationWrapper
+
+from .serializers import SegmentSerializer
 
 if typing.TYPE_CHECKING:
     from environments.identities.models import Identity
@@ -33,9 +39,21 @@ class WebhookWrapper(AbstractBaseIdentityIntegrationWrapper):
             feature_properties[feature_state.feature.name] = (
                 value if (feature_state.enabled and value) else feature_state.enabled
             )
+        serialized_flags = features.serializers.FeatureStateSerializerFull(
+            feature_states, many=True, context={"identity": identity}
+        )
+        serialized_traits = traits.serializers.TraitSerializerBasic(
+            identity.identity_traits.all(), many=True
+        )
+        serialized_segments = SegmentSerializer(
+            identity.environment.project.get_segments_from_cache(), many=True
+        )
 
-        return {
+        data = {
             "identity": identity.identifier,
-            "event": "Flagsmith Feature Flags",
-            "properties": feature_properties,
+            "traits": serialized_traits.data,
+            "flags": serialized_flags.data,
+            "segments": serialized_segments.data,
         }
+        breakpoint()
+        return data

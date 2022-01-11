@@ -8,15 +8,16 @@ from integrations.segment.segment import SegmentWrapper
 from integrations.webhook.webhook import WebhookWrapper
 
 IDENTITY_INTEGRATIONS = [
-    {"relation_name": "amplitude_config", "wrapper": AmplitudeWrapper},
-    {"relation_name": "segment_config", "wrapper": SegmentWrapper},
-    {"relation_name": "heap_config", "wrapper": HeapWrapper},
-    {"relation_name": "mixpanel_config", "wrapper": MixpanelWrapper},
-    {"relation_name": "webhook_config", "wrapper": WebhookWrapper},
+    # {"relation_name": "amplitude_config", "wrapper": AmplitudeWrapper},
+    # {"relation_name": "segment_config", "wrapper": SegmentWrapper},
+    # {"relation_name": "heap_config", "wrapper": HeapWrapper},
+    # {"relation_name": "mixpanel_config", "wrapper": MixpanelWrapper},
+    # {"relation_name": "webhook_config", "wrapper": WebhookWrapper},
 ]
 
 
 def identify_integrations(identity, all_feature_states):
+    identify_webhook(identity, all_feature_states)
     for integration in IDENTITY_INTEGRATIONS:
         config = getattr(identity.environment, integration.get("relation_name"), None)
         api_key = getattr(config, "api_key", None)
@@ -27,6 +28,17 @@ def identify_integrations(identity, all_feature_states):
                 identity=identity, feature_states=all_feature_states
             )
             wrapper_instance.identify_user_async(data=user_data)
+
+
+def identify_webhook(identity, all_feature_states):
+    breakpoint()
+    config = getattr(identity.environment, "webhook_config", None)
+    if config:
+        integration_webhook = WebhookWrapper(url=config.url, secret=config.secret)
+        user_data = integration_webhook.generate_user_data(
+            identity=identity, feature_states=all_feature_states
+        )
+        integration_webhook._identify_user(data=user_data)
 
 
 def get_hashed_percentage_for_object_ids(
