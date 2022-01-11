@@ -7,14 +7,14 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from environments.models import Environment
-from integrations.heap.models import HeapConfiguration
+from integrations.webhook.models import WebhookConfiguration
 from organisations.models import Organisation, OrganisationRole
 from projects.models import Project
 from util.tests import Helper
 
 
 @pytest.mark.django_db
-class HeapConfigurationTestCase(TestCase):
+class WebhookConfigurationTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
         user = Helper.create_ffadminuser()
@@ -32,13 +32,15 @@ class HeapConfigurationTestCase(TestCase):
             name="Test Environment", project=self.project
         )
         self.list_url = reverse(
-            "api-v1:environments:integrations-heap-list",
+            "api-v1:environments:integrations-webhook-list",
             args=[self.environment.api_key],
         )
 
-    def test_should_create_heap_config_when_post(self):
+        self.valid_webhook_url = "http://my.webhook.com/webhooks"
+
+    def test_should_create_webhook_config_when_post(self):
         # Given
-        data = {"api_key": "abc-123"}
+        data = {"url": self.valid_webhook_url}
 
         # When
         response = self.client.post(
@@ -50,17 +52,18 @@ class HeapConfigurationTestCase(TestCase):
         # Then
         assert response.status_code == status.HTTP_201_CREATED
         assert (
-            HeapConfiguration.objects.filter(environment=self.environment).count() == 1
+            WebhookConfiguration.objects.filter(environment=self.environment).count()
+            == 1
         )
 
-    def test_should_return_BadRequest_when_duplicate_heap_config_is_posted(self):
+    def test_should_return_BadRequest_when_duplicate_webhook_config_is_posted(self):
         # Given
-        config = HeapConfiguration.objects.create(
-            api_key="api_123", environment=self.environment
+        config = WebhookConfiguration.objects.create(
+            url=self.valid_webhook_url, environment=self.environment
         )
 
         # When
-        data = {"api_key": config.api_key}
+        data = {"url": config.url}
         response = self.client.post(
             self.list_url,
             data=json.dumps(data),
@@ -70,21 +73,23 @@ class HeapConfigurationTestCase(TestCase):
         # Then
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert (
-            HeapConfiguration.objects.filter(environment=self.environment).count() == 1
+            WebhookConfiguration.objects.filter(environment=self.environment).count()
+            == 1
         )
 
     def test_should_update_configuration_when_put(self):
         # Given
-        config = HeapConfiguration.objects.create(
-            api_key="api_123", environment=self.environment
+        config = WebhookConfiguration.objects.create(
+            url=self.valid_webhook_url,
+            environment=self.environment,
         )
 
-        api_key_updated = "new api"
-        data = {"api_key": api_key_updated}
+        new_url = "https://www.flagsmith.com/new-webhook"
+        data = {"url": new_url}
 
         # When
         url = reverse(
-            "api-v1:environments:integrations-heap-detail",
+            "api-v1:environments:integrations-webhook-detail",
             args=[self.environment.api_key, config.id],
         )
         response = self.client.put(
@@ -93,12 +98,11 @@ class HeapConfigurationTestCase(TestCase):
             content_type="application/json",
         )
         config.refresh_from_db()
-
         # Then
         assert response.status_code == status.HTTP_200_OK
-        assert config.api_key == api_key_updated
+        assert config.url == new_url
 
-    def test_should_return_heap_config_list_when_requested(self):
+    def test_should_return_webhook_config_list_when_requested(self):
         # Given - set up data
 
         # When
@@ -109,13 +113,13 @@ class HeapConfigurationTestCase(TestCase):
 
     def test_should_remove_configuration_when_delete(self):
         # Given
-        config = HeapConfiguration.objects.create(
-            api_key="api_123", environment=self.environment
+        config = WebhookConfiguration.objects.create(
+            url=self.valid_webhook_url, environment=self.environment
         )
 
         # When
         url = reverse(
-            "api-v1:environments:integrations-heap-detail",
+            "api-v1:environments:integrations-webhook-detail",
             args=[self.environment.api_key, config.id],
         )
         res = self.client.delete(url)
@@ -123,6 +127,6 @@ class HeapConfigurationTestCase(TestCase):
         # Then
         assert res.status_code == status.HTTP_204_NO_CONTENT
         #  and
-        assert not HeapConfiguration.objects.filter(
+        assert not WebhookConfiguration.objects.filter(
             environment=self.environment
         ).exists()

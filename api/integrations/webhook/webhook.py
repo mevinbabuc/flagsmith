@@ -13,8 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 class WebhookWrapper(AbstractBaseIdentityIntegrationWrapper):
-    def __init__(self, url):
+    def __init__(self, url, secret):
         self.url = url
+        self.secret = secret
 
     def _identify_user(self, user_data: dict) -> None:
         response = requests.post(self.url, json=user_data)
@@ -34,7 +35,6 @@ class WebhookWrapper(AbstractBaseIdentityIntegrationWrapper):
             )
 
         return {
-            "app_id": self.api_key,
             "identity": identity.identifier,
             "event": "Flagsmith Feature Flags",
             "properties": feature_properties,
