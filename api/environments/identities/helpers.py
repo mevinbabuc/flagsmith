@@ -33,7 +33,7 @@ def identify_webhook(identity, all_feature_states):
 
     config = getattr(identity.environment, "webhook_config", None)
     if config:
-        integration_webhook = WebhookWrapper(url=config.url, secret=config.secret)
+        integration_webhook = WebhookWrapper(config)
         user_data = integration_webhook.generate_user_data(
             identity=identity, feature_states=all_feature_states
         )

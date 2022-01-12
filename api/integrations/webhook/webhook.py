@@ -1,16 +1,12 @@
 import logging
 import typing
 
-import requests
-
 from environments.identities import traits
 from integrations.common.wrapper import AbstractBaseIdentityIntegrationWrapper
+from webhooks.webhooks import call_integration_webhook
 
 from .models import WebhookConfiguration
 from .serializers import IntegrationFeatureStateSerializer, SegmentSerializer
-
-# import features
-
 
 if typing.TYPE_CHECKING:
     from environments.identities.models import Identity
@@ -24,7 +20,8 @@ class WebhookWrapper(AbstractBaseIdentityIntegrationWrapper):
         self.config = config
 
     def _identify_user(self, data: typing.Mapping) -> None:
-        response = requests.post(self.url, json=data)
+        response = call_integration_webhook(self.config, data)
+
         logger.debug(
             "Sent event to Webhook. Response code was: %s" % response.status_code
         )
