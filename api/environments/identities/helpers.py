@@ -5,14 +5,12 @@ from integrations.amplitude.amplitude import AmplitudeWrapper
 from integrations.heap.heap import HeapWrapper
 from integrations.mixpanel.mixpanel import MixpanelWrapper
 from integrations.segment.segment import SegmentWrapper
-from integrations.webhook.webhook import WebhookWrapper
 
 IDENTITY_INTEGRATIONS = [
-    # {"relation_name": "amplitude_config", "wrapper": AmplitudeWrapper},
-    # {"relation_name": "segment_config", "wrapper": SegmentWrapper},
-    # {"relation_name": "heap_config", "wrapper": HeapWrapper},
-    # {"relation_name": "mixpanel_config", "wrapper": MixpanelWrapper},
-    # {"relation_name": "webhook_config", "wrapper": WebhookWrapper},
+    {"relation_name": "amplitude_config", "wrapper": AmplitudeWrapper},
+    {"relation_name": "segment_config", "wrapper": SegmentWrapper},
+    {"relation_name": "heap_config", "wrapper": HeapWrapper},
+    {"relation_name": "mixpanel_config", "wrapper": MixpanelWrapper},
 ]
 
 
@@ -31,7 +29,8 @@ def identify_integrations(identity, all_feature_states):
 
 
 def identify_webhook(identity, all_feature_states):
-    breakpoint()
+    from integrations.webhook.webhook import WebhookWrapper
+
     config = getattr(identity.environment, "webhook_config", None)
     if config:
         integration_webhook = WebhookWrapper(url=config.url, secret=config.secret)

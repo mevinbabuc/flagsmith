@@ -3,13 +3,14 @@ import typing
 
 import requests
 
-import features
-from environments.identities import (
-    traits,  # .serializers import TraitSerializerBasic
-)
+from environments.identities import traits
 from integrations.common.wrapper import AbstractBaseIdentityIntegrationWrapper
 
-from .serializers import SegmentSerializer
+from .models import WebhookConfiguration
+from .serializers import IntegrationFeatureStateSerializer, SegmentSerializer
+
+# import features
+
 
 if typing.TYPE_CHECKING:
     from environments.identities.models import Identity
@@ -19,12 +20,11 @@ logger = logging.getLogger(__name__)
 
 
 class WebhookWrapper(AbstractBaseIdentityIntegrationWrapper):
-    def __init__(self, url, secret):
-        self.url = url
-        self.secret = secret
+    def __init__(self, config: WebhookConfiguration):
+        self.config = config
 
-    def _identify_user(self, user_data: dict) -> None:
-        response = requests.post(self.url, json=user_data)
+    def _identify_user(self, data: typing.Mapping) -> None:
+        response = requests.post(self.url, json=data)
         logger.debug(
             "Sent event to Webhook. Response code was: %s" % response.status_code
         )
@@ -32,21 +32,16 @@ class WebhookWrapper(AbstractBaseIdentityIntegrationWrapper):
     def generate_user_data(
         self, identity: "Identity", feature_states: typing.List["FeatureState"]
     ) -> dict:
-        feature_properties = {}
-
-        for feature_state in feature_states:
-            value = feature_state.get_feature_state_value(identity=identity)
-            feature_properties[feature_state.feature.name] = (
-                value if (feature_state.enabled and value) else feature_state.enabled
-            )
-        serialized_flags = features.serializers.FeatureStateSerializerFull(
+        serialized_flags = IntegrationFeatureStateSerializer(
             feature_states, many=True, context={"identity": identity}
         )
         serialized_traits = traits.serializers.TraitSerializerBasic(
             identity.identity_traits.all(), many=True
         )
         serialized_segments = SegmentSerializer(
-            identity.environment.project.get_segments_from_cache(), many=True
+            identity.environment.project.get_segments_from_cache(),
+            many=True,
+            context={"identity": identity},
         )
 
         data = {
@@ -55,5 +50,4 @@ class WebhookWrapper(AbstractBaseIdentityIntegrationWrapper):
             "flags": serialized_flags.data,
             "segments": serialized_segments.data,
         }
-        breakpoint()
         return data
