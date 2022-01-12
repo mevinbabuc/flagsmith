@@ -1,7 +1,9 @@
 import pytest
 
+from environments.identities.models import Identity
 from environments.models import Environment
 from features.models import Feature
+from integrations.webhook.models import WebhookConfiguration
 from organisations.models import Organisation
 from projects.models import Project
 from users.models import FFAdminUser
@@ -82,4 +84,20 @@ def organisation_one_project_one_feature_one(organisation_one_project_one):
         project=organisation_one_project_one,
         name="feature_1",
         initial_value="feature_1_value",
+    )
+
+
+@pytest.fixture()
+def integration_webhook_config(organisation_one_project_one_environment_one):
+    return WebhookConfiguration.objects.create(
+        url="https://flagsmit.com/test-webhook",
+        environment=organisation_one_project_one_environment_one,
+    )
+
+
+@pytest.fixture()
+def identity(organisation_one_project_one_environment_one):
+    return Identity.objects.create(
+        identifier="test_identity_123",
+        environment=organisation_one_project_one_environment_one,
     )
