@@ -99,18 +99,14 @@ const FeaturesPage = class extends Component {
     }
 
     filter = flags => _.filter(flags, (flag) => {
-        if (!this.state.includeArchived && flag.is_archived) {
-            return false;
-        } if (!this.state.tags.length && this.state.includeArchived) {
-            return true;
-        }
-        if (!this.state.tags.length && !flag.is_archived) {
-            return true;
+        let isArchivedFlagFilter = this.state.includeArchived && flag.is_archived;
+        if (!this.state.includeArchived && (!flag.tags || !flag.tags.length)) {
+            return true
         }
         if (this.state.tags.includes('') && (!flag.tags || !flag.tags.length)) {
             return true;
         }
-        return _.intersection(flag.tags || [], this.state.tags).length;
+        return _.intersection(flag.tags || [], this.state.tags).length || isArchivedFlagFilter;
     }) || []
 
     createFeaturePermission(el) {
@@ -179,7 +175,7 @@ const FeaturesPage = class extends Component {
                                                             : null}
                                                     </FormGroup>
                                                 </Row>
-                                                <Permission level="environment" permission="ADMIN" id={this.props.match.params.environmentId}>
+                                                <Permission level="environment" permission={Utils.getManageFeaturePermission()} id={this.props.match.params.environmentId}>
                                                     {({ permission, isLoading }) => (
                                                         <FormGroup className="mb-4">
                                                             <PanelSearch

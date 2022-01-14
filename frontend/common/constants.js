@@ -92,6 +92,7 @@ const Constants = {
     adminPermissions: () => 'To use this feature you need the to be admin of the organisation.<br/>Please contact a member of this organisation who has administrator privileges.',
     projectPermissions: perm => `To use this feature you need the <i>${perm}</i> permission for this project.<br/>Please contact a member of this project who has administrator privileges.`,
     environmentPermissions: perm => `To use this feature you need the <i>${perm}</i> permission for this environment.<br/>Please contact a member of this environment who has administrator privileges.`,
+    organisationPermissions: perm => `To use this feature you need the <i>${perm}</i> permission for this organisation.<br/>Please contact a member of this organisation who has administrator privileges.`,
     pages: {
         'ACCOUNT': 'Account Page',
         'AUDIT_LOG': 'Audit Log Page',
@@ -115,6 +116,7 @@ const Constants = {
         'USERS': 'Users Page',
     },
     strings: {
+        TAGS_DESCRIPTION: 'Organise your flags with tags, tagging your features as "<strong>protected</strong>" will prevent them from accidentally being deleted.',
         HIDE_FROM_SDKS_DESCRIPTION: 'Enable this if you want to prevent the Flagsmith API from returning this feature regardless of if it is enabled. Use this if you don\'t want users to see that a feature name whilst it is in development.',
         SEGMENT_OVERRIDES_DESCRIPTION: 'Set different values for your feature based on what segments users are in.',
         MULTIVARIATE_DESCRIPTION: 'Features by default have 1 value and enabled state. Adding variations (or multivariates) lets you do % split a/b tests.<br/>Values for variations are set per projects but their % values are configured per environment, segment and identity.',

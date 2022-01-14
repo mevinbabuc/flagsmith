@@ -1,17 +1,19 @@
 import OrganisationStore from './organisation-store';
 import ConfigStore from './config-store';
+import PermissionsStore from './permissions-store';
 
 const BaseStore = require('./base/_store');
 const data = require('../data/base/_data');
 
 const controller = {
-    register: ({ email, password, first_name, last_name, organisation_name = 'Default Organisation' }, isInvite) => {
+    register: ({ email, password, first_name, last_name, marketing_consent_given, organisation_name = 'Default Organisation' }, isInvite) => {
         store.saving();
         data.post(`${Project.api}auth/users/`, {
             email,
             password,
             first_name,
             last_name,
+            marketing_consent_given,
             referrer: API.getReferrer() || '',
         })
             .then((res) => {
@@ -272,6 +274,11 @@ const controller = {
             store.isDemo = false;
             store.model = user;
             store.organisation = null;
+            PermissionsStore.model = {
+                availablePermissions: {
+
+                },
+            };
             store.trigger('logout');
             API.reset();
         }
@@ -347,6 +354,7 @@ const store = Object.assign({}, BaseStore, {
         return id && store.getOrganisationRole(id) === 'ADMIN';
     },
     getPlans() {
+        if (!store.model) return []
         return _.filter(store.model.organisations.map(org => org.subscription && org.subscription.plan), plan => !!plan);
     },
     getDate() {

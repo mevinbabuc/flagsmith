@@ -11,6 +11,7 @@ import withAuditWebhooks from '../../../common/providers/withAuditWebhooks';
 import CreateAuditWebhookModal from '../modals/CreateAuditWebhook';
 import ConfirmRemoveAuditWebhook from '../modals/ConfirmRemoveAuditWebhook';
 import Button from '../base/forms/Button';
+import { EditPermissionsModal } from '../EditPermissions';
 
 
 const OrganisationSettingsPage = class extends Component {
@@ -41,7 +42,7 @@ const OrganisationSettingsPage = class extends Component {
     componentDidMount = () => {
         API.trackPage(Constants.pages.ORGANISATION_SETTINGS);
         $('body').trigger('click');
-        if (AccountStore.getOrganisationRole() !== 'ADMIN') {
+        if (AccountStore.getUser() && AccountStore.getOrganisationRole() !== 'ADMIN') {
             this.context.router.history.replace('/projects');
         }
     };
@@ -266,6 +267,32 @@ const OrganisationSettingsPage = class extends Component {
         return null;
     }
 
+    editUserPermissions = (user) => {
+        openModal('Edit Organisation Permissions', <EditPermissionsModal
+          name={`${user.first_name} ${user.last_name}`}
+          id={AccountStore.getOrganisation().id}
+          onSave={() => {
+              AppActions.getOrganisation(AccountStore.getOrganisation().id);
+          }}
+          level="organisation"
+          user={user}
+        />);
+    }
+
+    editGroupPermissions = (group) => {
+        openModal(`Edit Organisation Permissions`, <EditPermissionsModal
+          name={`${group.name}`}
+          id={AccountStore.getOrganisation().id}
+          isGroup
+          onSave={() => {
+              AppActions.getOrganisation(AccountStore.getOrganisation().id);
+          }}
+          level="organisation"
+          group={group}
+          push={this.context.router.history.push}
+        />);
+    }
+
     render() {
         const { hasFeature, getValue } = this.props;
         const { name, webhook_notification_email } = this.state;
@@ -273,6 +300,7 @@ const OrganisationSettingsPage = class extends Component {
         const hasRbacPermission = !this.props.hasFeature('plan_based_access') || Utils.getPlansPermission(AccountStore.getPlans(), 'RBAC');
         const paymentsEnabled = this.props.hasFeature('payments_enabled');
         const force2faPermission = Utils.getPlansPermission(AccountStore.getPlans(), 'FORCE_2FA');
+
         return (
             <div className="app-container container">
 
@@ -283,7 +311,9 @@ const OrganisationSettingsPage = class extends Component {
                         user,
                         organisation,
                     }, { createOrganisation, selectOrganisation, deleteOrganisation }) => !!organisation && (
-                        <div>
+                        <OrganisationProvider>
+                            {({ isLoading, name, error, projects, usage, users, invites, influx_data, inviteLinks }) => (
+                                <div>
                             <FormGroup>
                                 <div className="margin-bottom">
                                     <div className="panel--grey" style={{ marginTop: '3em' }}>
@@ -359,33 +389,11 @@ const OrganisationSettingsPage = class extends Component {
                             </FormGroup>
                             <FormGroup className="mt-5">
                                 <div>
-                                    <OrganisationProvider>
-                                        {({ isLoading, name, error, projects, usage, users, invites, influx_data, inviteLinks }) => (
                                             <div>
-                                                {this.props.hasFeature('usage_chart') && !projectOverrides.disableInflux && (
-                                                <div className="panel--grey">
-                                                    {!isLoading && usage != null ? (
-                                                        <div>
-                                                            {this.props.hasFeature('usage_chart') ? this.drawChart(influx_data) : (
-                                                                <>
-                                                                    <div className="flex-row header--icon">
-                                                                        <h5>API usage</h5>
-                                                                    </div>
-                                                                    <span>
-                                                                        {'You have made '}
-                                                                        <strong>{`${Utils.numberWithCommas(usage)}`}</strong>
-                                                                        {' requests over the past 30 days.'}
-                                                                    </span>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    ) : <div className="text-center"><Loader/></div> }
-                                                </div>
-                                                )}
                                                 <Row space className="mt-5">
                                                     <h3 className="m-b-0">Team Members</h3>
                                                     <Button
-                                                      className="mr-2"
+                                                      style={{ width: 180 }}
                                                       id="btn-invite" onClick={() => openModal('Invite Users',
                                                           <InviteUsersModal/>)}
                                                       type="button"
@@ -440,9 +448,9 @@ const OrganisationSettingsPage = class extends Component {
                                                                  </div>
                                                                  {inviteLinks.find(f => f.role === this.state.role) && (
                                                                   <>
-                                                                      <div className="mr-2">
+                                                                      <Flex className="mr-4">
                                                                           <Input
-                                                                            style={{ width: 450 }}
+                                                                            style={{ width: '100%' }}
                                                                             value={`${document.location.origin}/invite/${inviteLinks.find(f => f.role === this.state.role).hash}`}
                                                                             data-test="invite-link"
                                                                             inputClassName="input input--wide"
@@ -452,12 +460,15 @@ const OrganisationSettingsPage = class extends Component {
                                                                             title={<h3>Link</h3>}
                                                                             placeholder="Link"
                                                                           />
-                                                                      </div>
+                                                                      </Flex>
+
                                                                       <div>
-                                                                          <Button onClick={() => {
-                                                                              navigator.clipboard.writeText(`${document.location.origin}/invite/${inviteLinks.find(f => f.role === this.state.role).hash}`);
-                                                                              toast('Link copied');
-                                                                          }}
+                                                                          <Button
+                                                                            style={{ width: 180 }}
+                                                                            onClick={() => {
+                                                                                navigator.clipboard.writeText(`${document.location.origin}/invite/${inviteLinks.find(f => f.role === this.state.role).hash}`);
+                                                                                toast('Link copied');
+                                                                            }}
                                                                           >
                                                                               Copy invite link
                                                                           </Button>
@@ -491,61 +502,78 @@ const OrganisationSettingsPage = class extends Component {
                                                               className="no-pad"
                                                               items={users}
                                                               itemHeight={65}
-                                                              renderRow={({ id, first_name, last_name, email, role }, i) => (
-                                                                  <Row
-                                                                    data-test={`user-${i}`}
-                                                                    space className="list-item" key={id}
-                                                                  >
-                                                                      <div>
-                                                                          {`${first_name} ${last_name}`}
-                                                                          {' '}
-                                                                          {id == AccountStore.getUserId() && '(You)'}
-                                                                          <div className="list-item-footer faint">
-                                                                              {email}
-                                                                          </div>
-                                                                      </div>
-                                                                      <Row>
-                                                                          <Column>
-                                                                              {organisation.role === 'ADMIN' && id !== AccountStore.getUserId() ? (
-                                                                                  <div style={{ width: 250 }}>
-                                                                                      <Select
-                                                                                        data-test="select-role"
-                                                                                        placeholder="Select a role"
-                                                                                        styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                                                                                        value={role && { value: role, label: Constants.roles[role] }}
-                                                                                        onChange={e => this.roleChanged(id, Utils.safeParseEventValue(e))}
-                                                                                        className="pl-2"
-                                                                                        options={_.map(Constants.roles, (label, value) => (
-                                                                                            {
-                                                                                                value,
-                                                                                                label:
-                                                                                            value !== 'ADMIN' && !hasRbacPermission ? `${label} - Please upgrade for role based access` : label,
-                                                                                                isDisabled: value !== 'ADMIN' && !hasRbacPermission,
-                                                                                            }
-                                                                                        ))}
-                                                                                        menuPortalTarget={document.body}
-                                                                                        menuPosition="absolute"
-                                                                                        menuPlacement="auto"
-                                                                                      />
-                                                                                  </div>
-                                                                              ) : (
-                                                                                  <div className="pl-3">{Constants.roles[role] || ''}</div>
-                                                                              )}
-                                                                          </Column>
+                                                              renderRow={(user, i) => {
+                                                                  const { id, first_name, last_name, email, role } = user;
+                                                                  const onEditClick = () => {
+                                                                      if (role !== 'ADMIN') {
+                                                                          this.editUserPermissions(user);
+                                                                      }
+                                                                  };
+                                                                  return (
+                                                                      <Row
+                                                                        data-test={`user-${i}`}
 
-                                                                          <Column>
-                                                                              <button
-                                                                                id="delete-invite"
-                                                                                type="button"
-                                                                                onClick={() => this.deleteUser(id)}
-                                                                                className="btn btn--with-icon ml-auto btn--remove"
-                                                                              >
-                                                                                  <RemoveIcon/>
-                                                                              </button>
-                                                                          </Column>
+                                                                        space className={'list-item clickable'} key={id}
+                                                                      >
+                                                                          <Flex onClick={onEditClick}>
+
+                                                                              {`${first_name} ${last_name}`}
+
+
+                                                                              {' '}
+                                                                              {id == AccountStore.getUserId() && '(You)'}
+                                                                              <div className="list-item-footer faint">
+                                                                                  {email}
+                                                                              </div>
+                                                                          </Flex>
+                                                                          <Row>
+                                                                              <Column>
+                                                                                  {organisation.role === 'ADMIN' && id !== AccountStore.getUserId() ? (
+                                                                                      <div style={{ width: 250 }}>
+                                                                                          <Select
+                                                                                            data-test="select-role"
+                                                                                            placeholder="Select a role"
+                                                                                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                                                                            value={role && { value: role, label: Constants.roles[role] }}
+                                                                                            onChange={e => this.roleChanged(id, Utils.safeParseEventValue(e))}
+                                                                                            className="pl-2"
+                                                                                            options={_.map(Constants.roles, (label, value) => (
+                                                                                                {
+                                                                                                    value,
+                                                                                                    label:
+                                                                                                          value !== 'ADMIN' && !hasRbacPermission ? `${label} - Please upgrade for role based access` : label,
+                                                                                                    isDisabled: value !== 'ADMIN' && !hasRbacPermission,
+                                                                                                }
+                                                                                            ))}
+                                                                                            menuPortalTarget={document.body}
+                                                                                            menuPosition="absolute"
+                                                                                            menuPlacement="auto"
+                                                                                          />
+                                                                                      </div>
+                                                                                  ) : (
+                                                                                      <div className="pl-3 mr-2">{Constants.roles[role] || ''}</div>
+                                                                                  )}
+                                                                              </Column>
+
+                                                                              {role !== 'ADMIN' && (
+                                                                                  <Column onClick={onEditClick}>
+                                                                                      <Button className="btn--link">Edit Permissions</Button>
+                                                                                  </Column>
+                                                                              )}
+                                                                              <Column>
+                                                                                  <button
+                                                                                    id="delete-invite"
+                                                                                    type="button"
+                                                                                    onClick={() => this.deleteUser(id)}
+                                                                                    className="btn btn--with-icon ml-auto btn--remove"
+                                                                                  >
+                                                                                      <RemoveIcon/>
+                                                                                  </button>
+                                                                              </Column>
+                                                                          </Row>
                                                                       </Row>
-                                                                  </Row>
-                                                              )}
+                                                                  );
+                                                              }}
                                                               renderNoResults={(
                                                                   <div>
                                                                   You have no users in this organisation.
@@ -635,7 +663,11 @@ const OrganisationSettingsPage = class extends Component {
                                                                 </Button>
                                                             </Row>
                                                             <p>Groups allow you to manage permissions for viewing and editing projects, features and environments.</p>
-                                                            <UserGroupList showRemove orgId={organisation && organisation.id}/>
+                                                            <UserGroupList
+                                                              onEditPermissions={
+                                                                this.editGroupPermissions
+                                                            } showRemove orgId={organisation && organisation.id}
+                                                            />
                                                         </div>
 
                                                         {this.props.hasFeature('force_2fa') && (
@@ -658,8 +690,6 @@ const OrganisationSettingsPage = class extends Component {
                                                     )}
                                                 </div>
                                             </div>
-                                        )}
-                                    </OrganisationProvider>
                                 </div>
                             </FormGroup>
                             <FormGroup className="m-y-3">
@@ -769,6 +799,26 @@ const OrganisationSettingsPage = class extends Component {
 
                                 </FormGroup>
                             )}
+                            {this.props.hasFeature('usage_chart') && !projectOverrides.disableInflux && (
+                                <div className="panel--grey mt-2">
+                                    {!isLoading && usage != null ? (
+                                        <div>
+                                            {this.props.hasFeature('usage_chart') ? this.drawChart(influx_data) : (
+                                                <>
+                                                    <div className="flex-row header--icon">
+                                                        <h5>API usage</h5>
+                                                    </div>
+                                                    <span>
+                                                        {'You have made '}
+                                                        <strong>{`${Utils.numberWithCommas(usage)}`}</strong>
+                                                        {' requests over the past 30 days.'}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    ) : <div className="text-center"><Loader/></div> }
+                                </div>
+                            )}
                             <FormGroup className="mt-5">
                                 <Row>
                                     <Column>
@@ -789,6 +839,8 @@ const OrganisationSettingsPage = class extends Component {
                                 </Row>
                             </FormGroup>
                         </div>
+                            )}
+                        </OrganisationProvider>
                     )}
                 </AccountProvider>
             </div>

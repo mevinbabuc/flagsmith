@@ -26,13 +26,13 @@ env = Env()
 logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 ENV = env("ENVIRONMENT", default="local")
 if ENV not in ("local", "dev", "staging", "production"):
     warnings.warn(
-        "ENVIRONMENT env variable must be one of local, dev, staging or production"
+        "ENVIRONMENT env variable must be one of local, dev, staging, production"
     )
 
 DEBUG = env.bool("DEBUG", default=False)
@@ -96,6 +96,7 @@ INSTALLED_APPS = [
     "users",
     "organisations",
     "organisations.invites",
+    "organisations.permissions",
     "projects",
     "sales_dashboard",
     "environments",
@@ -127,6 +128,7 @@ INSTALLED_APPS = [
     "integrations.segment",
     "integrations.heap",
     "integrations.mixpanel",
+    "integrations.slack",
     # Rate limiting admin endpoints
     "axes",
     "telemetry",
@@ -509,3 +511,26 @@ AMPLITUDE_API_KEY = env("AMPLITUDE_API_KEY", default=None)
 
 # Set this to enable create organisation for only superusers
 RESTRICT_ORG_CREATE_TO_SUPERUSERS = env.bool("RESTRICT_ORG_CREATE_TO_SUPERUSERS", False)
+# Slack Integration
+SLACK_CLIENT_ID = env.str("SLACK_CLIENT_ID", default="")
+SLACK_CLIENT_SECRET = env.str("SLACK_CLIENT_SECRET", default="")
+
+# MailerLite
+MAILERLITE_BASE_URL = env.str(
+    "MAILERLITE_BASE_URL", default="https://api.mailerlite.com/api/v2/"
+)
+MAILERLITE_API_KEY = env.str("MAILERLITE_API_KEY", None)
+
+# Additional functionality for using SAML in Flagsmith SaaS
+SAML_MODULE_PATH = env("SAML_MODULE_PATH", os.path.join(BASE_DIR, "saml"))
+SAML_INSTALLED = os.path.exists(SAML_MODULE_PATH)
+
+if SAML_INSTALLED:
+    SAML_REQUESTS_CACHE_LOCATION = "saml_requests_cache"
+    CACHES[SAML_REQUESTS_CACHE_LOCATION] = {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": SAML_REQUESTS_CACHE_LOCATION,
+    }
+    INSTALLED_APPS += ["saml"]
+    SAML_ACCEPTED_TIME_DIFF = env.int("SAML_ACCEPTED_TIME_DIFF", default=60)
+    DJOSER["SERIALIZERS"]["current_user"] = "saml.serializers.SamlCurrentUserSerializer"
