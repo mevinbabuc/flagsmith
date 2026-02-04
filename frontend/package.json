@@ -116,6 +116,6 @@
     "nightwatch": "1.7.8",
     "nodemon": "1.18.11",
     "raw-loader": "0.5.1",
-    "testcafe": "^1.17.1"
+    "testcafe": "^3.7.4"
   }
 }
